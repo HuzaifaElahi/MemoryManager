@@ -8,6 +8,8 @@
 #ifndef KERNEL_H
 #define KERNEL_H
 
+int boot();
+int kernel();
 int myinit(char* fileName);
 void scheduler();
 

@@ -8,11 +8,14 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
+#include "kernel.h"
 #include "shell.h"
 #include "pcb.h"
 #include "ram.h"
 #include "cpu.h"
+#include "memorymanager.h"
 
 struct QUEUE_NODE {
     PCB *thisPCB;
@@ -22,20 +25,46 @@ struct QUEUE_NODE {
 void addToReady(PCB *pcb);
 
 CPU* cpu;
-char *ram[1000];
-
+char *ram[40];
 int main(int argc, const char *argv[])
 {
 	int error=0;
 	boot();
+	char* const path = "script1.txt";
+	FILE *p = fopen(path, "r");
+	launcher(p);
     error = kernel();
     return error;
 }
 
 int boot(){
-	//TODO
 	//create RAM global array of size 40 strings(not malloced). initializes array cells to null.
 	//clears old backing storage directory ,create new directory. Directory name is "BackingStore".
+    for(int i=0; i<40 ; i++){
+        ram[i] = NULL;
+    }
+    char rm_cmd[100];
+    strcpy(rm_cmd, "rm -r BackingStore");
+    system(rm_cmd);
+
+    char mkdir_cmd[100];
+    strcpy(mkdir_cmd, "mkdir BackingStore");
+    system(mkdir_cmd);
+
+//    int pid=0;
+
+//	char filePath[100] = "BackingStore/";
+//	char extension[10];
+//	char fileName[100];
+//	sprintf(fileName, "%d", pid);
+//	strcat(filePath, fileName);
+//	strcat(filePath, ".txt");
+//	char touch_cmd[100];
+//	strcpy(touch_cmd, "touch ");
+//	strcat(touch_cmd, filePath);
+//	system(touch_cmd);
+//	printf("%s\n", touch_cmd);
+
 	return 0;
 }
 

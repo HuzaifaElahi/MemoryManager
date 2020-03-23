@@ -9,12 +9,12 @@
 #define PCB_H
 
 typedef struct PCB_t {
+	int start;
+	int end;
     int PC;
-    int start;
-    int end;
     int pageTable[10];
     int PC_page;
-    int PC_offest;
+    int PC_offset;
     int pages_max;
 } PCB;
 
