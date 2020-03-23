@@ -12,6 +12,10 @@ typedef struct PCB_t {
     int PC;
     int start;
     int end;
+    int pageTable[10];
+    int PC_page;
+    int PC_offest;
+    int pages_max;
 } PCB;
 
 PCB* makePCB(int start, int end);

@@ -26,7 +26,21 @@ char *ram[1000];
 
 int main(int argc, const char *argv[])
 {
-    shellUI();
+	int error=0;
+	boot();
+    error = kernel();
+    return error;
+}
+
+int boot(){
+	//TODO
+	//create RAM global array of size 40 strings(not malloced). initializes array cells to null.
+	//clears old backing storage directory ,create new directory. Directory name is "BackingStore".
+	return 0;
+}
+
+int kernel(){
+	return shellUI();
 }
 
 int myinit(char *fileName){
