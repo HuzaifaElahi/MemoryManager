@@ -50,21 +50,6 @@ int boot(){
     char mkdir_cmd[100];
     strcpy(mkdir_cmd, "mkdir BackingStore");
     system(mkdir_cmd);
-
-//    int pid=0;
-
-//	char filePath[100] = "BackingStore/";
-//	char extension[10];
-//	char fileName[100];
-//	sprintf(fileName, "%d", pid);
-//	strcat(filePath, fileName);
-//	strcat(filePath, ".txt");
-//	char touch_cmd[100];
-//	strcpy(touch_cmd, "touch ");
-//	strcat(touch_cmd, filePath);
-//	system(touch_cmd);
-//	printf("%s\n", touch_cmd);
-
 	return 0;
 }
 
