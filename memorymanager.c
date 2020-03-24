@@ -18,28 +18,6 @@
 char *ram[40];
 int pid=0;
 
-int findVictim(PCB *p){
-	srand(time(0));
-	int victimIndex = rand()%40;
-	printf("%d", victimIndex);
-	return 0;
-
-}
-//
-//int victimExistsInPCB(PCB *p){
-//	p->
-//	return 0;
-//}
-
-int updatePageTable(PCB *p, int pageNumber, int frameNumber, int victimFrame){
-	if(victimFrame!=0){
-//		PCB victim = findVictimPCB();
-	}
-
-	p->pageTable[pageNumber] = frameNumber;
-	return 0;
-
-}
 
 int createBackingStorageFile(char** file){
 	char filePath[100] = "BackingStore/";
@@ -67,7 +45,63 @@ int copyIntoBackingFile(FILE* fptr1, FILE* fptr2){
     return 0;
 }
 
-int launchPaging(){
+int launchPaging(PCB *pcb, FILE* f, int totalPages){
+	int error=0;
+    int enableFindVictim=0;
+	int frameNumber = findFrame();
+	if(frameNumber == -1)	{
+		frameNumber = findVictim(pcb);
+		enableFindVictim=1;
+	}
+	error = loadPage(0, f, frameNumber);
+	if(error!=0)
+		return error;
+	updatePageTable(pcb, 0, frameNumber, enableFindVictim);
+	printf("1st frame:%d\n", pcb->pageTable[0]);
+
+	if(totalPages>1){
+		frameNumber = findFrame();
+		if(frameNumber == -1)	{
+			frameNumber = findVictim(pcb);
+			enableFindVictim=1;
+		}
+		error = loadPage(1, f, frameNumber);
+		if(error!=0)
+			return error;
+		updatePageTable(pcb, 1, frameNumber, enableFindVictim);
+		printf("2nd frame:%d\n", pcb->pageTable[1]);
+	}
+	return error;
+}
+
+int victimExistsInPCB(PCB *p, int index){
+	size_t length = sizeof(p->pageTable)/sizeof(int);
+	for(int i=0; i<length;i++){
+		if(p->pageTable[i]==index)
+			return 1;
+	}
+	return 0;
+}
+
+int findVictim(PCB *p){
+	printf("find victim\n");
+	srand(time(0));
+	int victimIndex = ((rand()%40)/4)*4;
+	printf("random index is:%d\n", victimIndex);
+	while(victimExistsInPCB(p, victimIndex)){
+		victimIndex=(victimIndex+4)%40;
+	}
+	printf("final victim Index:%d\n", victimIndex);
+	return victimIndex;
+
+}
+
+int updatePageTable(PCB *p, int pageNumber, int frameNumber, int victimFrame){
+	if(victimFrame!=0){
+//		PCB victim = findVictimPCB();
+	}
+
+	p->pageTable[pageNumber] = frameNumber;
 	return 0;
 }
 
@@ -84,32 +118,9 @@ int launcher(FILE *fptr1){
     PCB* pcb = makePCB(0, 0);
     pcb->pages_max = totalPages;
 
-    int enableFindVictim=0;
-	int frameNumber = findFrame();
-	if(frameNumber == -1)	{
-		frameNumber = findVictim(pcb);
-		enableFindVictim=1;
-	}
-	printf("1st frame:%d\n", frameNumber);
-	error = loadPage(0, f, frameNumber);
-	if(error!=0)
-		return error;
+    error= launchPaging(pcb, f, totalPages);
 
-	updatePageTable(pcb, 0, frameNumber, enableFindVictim);
-
-	if(totalPages>1){
-		frameNumber = findFrame();
-		if(frameNumber == -1)	{
-			frameNumber = findVictim(pcb);
-			enableFindVictim=1;
-		}
-		error = loadPage(1, f, frameNumber);
-		if(error!=0)
-			return error;
-		printf("%d", pcb->pageTable[1]);
-		updatePageTable(pcb, 1, frameNumber, enableFindVictim);
-	}
-	return 0;
+	return error;
 }
 
 int countTotalPages(FILE *f){
@@ -129,6 +140,9 @@ int countTotalPages(FILE *f){
 }
 
 int loadPage(int pageNumber, FILE *f, int frameNumber){
+	for(int i=0; i<40;i+=4){
+		ram[i]="dc";
+	}
 	return 0;
 }
 
