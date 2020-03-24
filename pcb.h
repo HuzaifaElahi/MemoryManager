@@ -9,8 +9,10 @@
 #define PCB_H
 
 typedef struct PCB_t {
+	int pid;
 	int start;
 	int end;
+	int max_lines;
     int PC;
     int pageTable[10];
     int PC_page;

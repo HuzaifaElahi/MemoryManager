@@ -23,5 +23,7 @@ int updatePageTable(PCB *p, int pageNumber, int frameNumber, int victimFrame);
 
 int findVictim(PCB *p);
 
+int resolvePageFault(PCB *p);
+
 
 #endif /* MEMORYMANAGER_H_ */

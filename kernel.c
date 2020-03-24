@@ -58,6 +58,7 @@ int kernel(){
 }
 
 int myinit(char *fileName){
+	int errCode =0;
     int start = 0;
     int end = 0;
     FILE *file = fopen(fileName, "r");
@@ -65,8 +66,8 @@ int myinit(char *fileName){
         printf("exec: Script '%s' not found.\n", fileName);
         return 1;
     }
-    int errCode = addToRAM(file, &start, &end);
-    if(errCode != 0)	return errCode;
+//    errCode = addToRAM(file, &start, &end);
+//    if(errCode != 0)	return errCode;
     PCB* thisPCB = makePCB(start, end);
     addToReady(thisPCB);
     return errCode;
@@ -92,16 +93,25 @@ void scheduler(){
 
     while(head != NULL && head!=tail->next){
         PCB* removeHead = head->thisPCB;
-        cpu->IP = removeHead->PC;	    // Copy PC from PCB into IP of CPU
+        cpu->IP = removeHead->pageTable[removeHead->PC_page];	    // Copy PC from PCB into IP of CPU
+        cpu->offset = removeHead->PC_offset;
         oldhead = head;
-        int InstructionsToExecute = (removeHead->end - removeHead->PC) + 1;
-
+        int InstructionsToExecute = (removeHead->max_lines - removeHead->PC) + 1;
+        int interruptStatusFlag=0;
         if(cpu->quanta < InstructionsToExecute){
-            runCPU(cpu->quanta);
-            removeHead->PC = cpu->IP;
-            addToReady(removeHead);		//add PCB back to the end of the ready queue
+        	interruptStatusFlag = runCPU(cpu->quanta);
+        	if(interruptStatusFlag==1){
+        		resolvePageFault(removeHead);
+        	}
+        	else{
+        		removeHead->PC_offset = cpu->offset;
+        		removeHead->PC = (cpu->IP)*4 + cpu->offset;
+                addToReady(removeHead);		//add PCB back to the end of the ready queue
+        	}
         }else{
-            runCPU(InstructionsToExecute);
+        	interruptStatusFlag = runCPU(InstructionsToExecute);
+        	if(interruptStatusFlag==1)
+        		resolvePageFault(removeHead);
             for(int i = removeHead->start; i <= removeHead->end ; i++){
                 ram[i] = NULL;
             }

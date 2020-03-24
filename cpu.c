@@ -14,11 +14,15 @@
 #include "interpreter.h"
 #include "ram.h"
 
-void runCPU(int quanta){
+int runCPU(int quanta){
     while(quanta > 0){
-        strcpy(cpu->IR, ram[cpu->IP]);
+    	int address = (cpu->IP)*4 +(cpu->offset);
+        strcpy(cpu->IR, ram[address]);
         interpret(cpu->IR);
-        cpu->IP++;
+        cpu->offset++;
+        if(cpu->offset>=4)
+        	return 1;
         quanta--;
     }
+    return 0;
 }

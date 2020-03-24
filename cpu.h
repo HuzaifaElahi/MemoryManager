@@ -9,13 +9,13 @@
 #ifndef CPU_H
 #define CPU_H
 
-void runCPU(int);
+int runCPU(int);
 
 typedef struct CPU_t {
     int IP;
+    int offset;
     char IR[1000];
     int quanta;
-    int offset;
 } CPU;
 
 extern CPU *cpu;

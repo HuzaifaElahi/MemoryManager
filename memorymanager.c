@@ -14,18 +14,24 @@
 #include "memorymanager.h"
 #include "pcb.h"
 #include "ram.h"
-#include "kernel.h"
+//#include "kernel.h"
 
 char *ram[40];
-int pid=0;
+int generated_pid=0;
 
-
-int createBackingStorageFile(char** file){
+int constructFilePathFromPID(char** file, int pid){
 	char filePath[100] = "BackingStore/";
 	char fileName[100];
 	sprintf(fileName, "%d", pid);
 	strcat(filePath, fileName);
 	strcat(filePath, ".txt");
+	*file = strdup(filePath);
+	return 0;
+}
+
+int createBackingStorageFile(char** file){
+	char* filePath;
+	constructFilePathFromPID(&filePath, generated_pid);
 	char touch_cmd[100];
 	strcpy(touch_cmd, "touch ");
 	strcat(touch_cmd, filePath);
@@ -101,6 +107,7 @@ int launcher(FILE *fptr1){
 
     error= launchPaging(pcb, f, totalPages);
 
+    generated_pid++;
 	return error;
 }
 
@@ -130,7 +137,7 @@ int loadPage(int pageNumber, FILE *f, int frameNumber){
         size_t linecap = 0;
         getline(&line, &linecap, f);
     	if(lineCount>=lineTarget && lineCount<lineTarget+4){
-    		ram[frameNumber+offset]=strdup(line);
+    		ram[frameNumber*4+offset]=strdup(line);
     		offset++;
     	}
     	lineCount++;
@@ -141,7 +148,7 @@ int loadPage(int pageNumber, FILE *f, int frameNumber){
 int findFrame(){
 	for(int i=0; i<37; i+=4){
 		if(ram[i]==NULL && ram[i+1]==NULL && ram[i+2]==NULL && ram[i+3]==NULL){
-			return i;
+			return i/4;
 		}
 	}
 	return -1;
@@ -157,16 +164,43 @@ int findVictim(PCB *p){
 	}
 	printf("final victim Index:%d\n", victimIndex);
 	return victimIndex;
-
 }
 
 int updatePageTable(PCB *p, int pageNumber, int frameNumber, int victimFrame){
 	if(victimFrame!=0){
-//		PCB victim = findVictimPCB();
+		//TODO
+		//	PCB victim = findVictimPCB();
 	}
 
 	p->pageTable[pageNumber] = frameNumber;
 	return 0;
+}
+
+int resolvePageFault(PCB *pcb){
+	int error=0;
+	int enableFindVictim=0;
+	(pcb->PC_page)++;
+	if(pcb->PC_page>=pcb->pages_max)
+		return 0;
+	//check if frame exists in ram
+	if(pcb->pageTable[pcb->PC_page] == -1){
+		int frameNumber = findFrame();
+		if(frameNumber == -1)	{
+			frameNumber = findVictim(pcb);
+			enableFindVictim=1;
+		}
+
+		char* filePath;
+		constructFilePathFromPID(&filePath, pcb->pid);
+		FILE* f=fopen(filePath, "r");
+		error = loadPage(pcb->PC_page, f, frameNumber);
+		if(error!=0)
+			return error;
+		updatePageTable(pcb, pcb->PC_page, frameNumber, enableFindVictim);
+	}
+	pcb->PC = (pcb->pageTable[pcb->PC_page])*4;
+	pcb->PC_offset=0;
+	return error;
 }
 
 
