@@ -14,6 +14,7 @@
 #include "memorymanager.h"
 #include "pcb.h"
 #include "ram.h"
+#include "kernel.h"
 
 char *ram[40];
 int pid=0;
@@ -74,6 +75,7 @@ int launchPaging(PCB *pcb, FILE* f, int totalPages){
 	return error;
 }
 
+
 int victimExistsInPCB(PCB *p, int index){
 	size_t length = sizeof(p->pageTable)/sizeof(int);
 	for(int i=0; i<length;i++){
@@ -83,27 +85,6 @@ int victimExistsInPCB(PCB *p, int index){
 	return 0;
 }
 
-int findVictim(PCB *p){
-	printf("find victim\n");
-	srand(time(0));
-	int victimIndex = ((rand()%40)/4)*4;
-	printf("random index is:%d\n", victimIndex);
-	while(victimExistsInPCB(p, victimIndex)){
-		victimIndex=(victimIndex+4)%40;
-	}
-	printf("final victim Index:%d\n", victimIndex);
-	return victimIndex;
-
-}
-
-int updatePageTable(PCB *p, int pageNumber, int frameNumber, int victimFrame){
-	if(victimFrame!=0){
-//		PCB victim = findVictimPCB();
-	}
-
-	p->pageTable[pageNumber] = frameNumber;
-	return 0;
-}
 
 int launcher(FILE *fptr1){
 	char* file;
@@ -140,9 +121,20 @@ int countTotalPages(FILE *f){
 }
 
 int loadPage(int pageNumber, FILE *f, int frameNumber){
-	for(int i=0; i<40;i+=4){
-		ram[i]="dc";
-	}
+	fseek(f, 0, SEEK_SET);
+	int lineTarget = pageNumber*4;
+	int lineCount=0;
+    int offset=0;
+    while(!feof(f)){
+        char *line = NULL;
+        size_t linecap = 0;
+        getline(&line, &linecap, f);
+    	if(lineCount>=lineTarget && lineCount<lineTarget+4){
+    		ram[frameNumber+offset]=strdup(line);
+    		offset++;
+    	}
+    	lineCount++;
+    }
 	return 0;
 }
 
@@ -153,6 +145,28 @@ int findFrame(){
 		}
 	}
 	return -1;
+}
+
+int findVictim(PCB *p){
+	printf("find victim\n");
+	srand(time(0));
+	int victimIndex = ((rand()%40)/4)*4;
+	printf("random index is:%d\n", victimIndex);
+	while(victimExistsInPCB(p, victimIndex)){
+		victimIndex=(victimIndex+4)%40;
+	}
+	printf("final victim Index:%d\n", victimIndex);
+	return victimIndex;
+
+}
+
+int updatePageTable(PCB *p, int pageNumber, int frameNumber, int victimFrame){
+	if(victimFrame!=0){
+//		PCB victim = findVictimPCB();
+	}
+
+	p->pageTable[pageNumber] = frameNumber;
+	return 0;
 }
 
 
