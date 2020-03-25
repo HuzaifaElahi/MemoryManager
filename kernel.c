@@ -63,7 +63,7 @@ int myinit(char *fileName){
         printf("exec: Script '%s' not found.\n", fileName);
         return 1;
     }
-//    errCode = addToRAM(file, &start, &end);
+
 //    if(errCode != 0)	return errCode;
     PCB* thisPCB = makePCB();
     addToReady(thisPCB);

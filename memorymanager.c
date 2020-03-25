@@ -102,8 +102,9 @@ int launcher(FILE *fptr1){
 	int totalPages = countTotalPages(f);
 	printf("total pages:%d\n", totalPages);
 
-    PCB* pcb = makePCB(0, 0);
+    PCB* pcb = makePCB();
     pcb->pages_max = totalPages;
+    pcb->pid=generated_pid;
 
     error= launchPaging(pcb, f, totalPages);
 
@@ -167,9 +168,7 @@ int findVictim(PCB *p){
 }
 
 int updatePageTable(PCB *p, int pageNumber, int frameNumber, int victimFrame){
-	if(victimFrame!=0){
-		//TODO
-		//	PCB victim = findVictimPCB();
+	if(victimFrame!=0){		//if victim was selected, update other PCBs to not point anymore to the removed victim
 		struct QUEUE_NODE *pointer = head;
 		while(pointer!=NULL){
 			PCB *thisPCB = pointer->thisPCB;

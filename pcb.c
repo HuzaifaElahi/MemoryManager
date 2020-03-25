@@ -16,5 +16,8 @@ PCB* makePCB(){
     PCB* newPCB = malloc(sizeof(struct PCB_t));
     newPCB->PC_page=0;
     newPCB->PC_offset=0;
+    for(int i=0; i<10;i++){
+    	newPCB->pageTable[i]=-1;
+    }
     return newPCB;
 }
