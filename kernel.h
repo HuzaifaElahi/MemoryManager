@@ -8,6 +8,16 @@
 #ifndef KERNEL_H
 #define KERNEL_H
 
+#include "pcb.h"
+
+struct QUEUE_NODE {
+    PCB *thisPCB;
+    struct QUEUE_NODE *next;
+};
+
+extern struct QUEUE_NODE *head;
+extern struct QUEUE_NODE *tail;
+
 int boot();
 int kernel();
 int myinit(char* fileName);

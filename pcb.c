@@ -12,10 +12,9 @@
 
 #include "pcb.h"
 
-PCB* makePCB(int start, int end){
+PCB* makePCB(){
     PCB* newPCB = malloc(sizeof(struct PCB_t));
-    newPCB->PC = start;
-    newPCB->start = start;
-    newPCB->end = end;
+    newPCB->PC_page=0;
+    newPCB->PC_offset=0;
     return newPCB;
 }

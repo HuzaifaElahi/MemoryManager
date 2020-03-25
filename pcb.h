@@ -10,8 +10,6 @@
 
 typedef struct PCB_t {
 	int pid;
-	int start;
-	int end;
 	int max_lines;
     int PC;
     int pageTable[10];
@@ -20,6 +18,6 @@ typedef struct PCB_t {
     int pages_max;
 } PCB;
 
-PCB* makePCB(int start, int end);
+PCB* makePCB();
 
 #endif

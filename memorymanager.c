@@ -14,8 +14,8 @@
 #include "memorymanager.h"
 #include "pcb.h"
 #include "ram.h"
-//#include "kernel.h"
 
+struct QUEUE_NODE *head;
 char *ram[40];
 int generated_pid=0;
 
@@ -170,6 +170,16 @@ int updatePageTable(PCB *p, int pageNumber, int frameNumber, int victimFrame){
 	if(victimFrame!=0){
 		//TODO
 		//	PCB victim = findVictimPCB();
+		struct QUEUE_NODE *pointer = head;
+		while(pointer!=NULL){
+			PCB *thisPCB = pointer->thisPCB;
+			for(int i=0; i<10; i++){
+				if((thisPCB->pageTable[i])==frameNumber){
+					thisPCB->pageTable[i]=-1;
+				}
+			}
+			pointer = pointer->next;
+		}
 	}
 
 	p->pageTable[pageNumber] = frameNumber;
@@ -181,7 +191,7 @@ int resolvePageFault(PCB *pcb){
 	int enableFindVictim=0;
 	(pcb->PC_page)++;
 	if(pcb->PC_page>=pcb->pages_max)
-		return 0;
+		return 1;
 	//check if frame exists in ram
 	if(pcb->pageTable[pcb->PC_page] == -1){
 		int frameNumber = findFrame();

@@ -12,15 +12,14 @@
 
 #include "kernel.h"
 #include "shell.h"
-#include "pcb.h"
 #include "ram.h"
 #include "cpu.h"
 #include "memorymanager.h"
 
-struct QUEUE_NODE {
-    PCB *thisPCB;
-    struct QUEUE_NODE *next;
-} *head = NULL, *oldhead = NULL, *tail = NULL;
+
+struct QUEUE_NODE *oldhead = NULL;
+struct QUEUE_NODE *head = NULL;
+struct QUEUE_NODE *tail = NULL;
 
 void addToReady(PCB *pcb);
 
@@ -59,8 +58,6 @@ int kernel(){
 
 int myinit(char *fileName){
 	int errCode =0;
-    int start = 0;
-    int end = 0;
     FILE *file = fopen(fileName, "r");
     if (file == NULL) {
         printf("exec: Script '%s' not found.\n", fileName);
@@ -68,7 +65,7 @@ int myinit(char *fileName){
     }
 //    errCode = addToRAM(file, &start, &end);
 //    if(errCode != 0)	return errCode;
-    PCB* thisPCB = makePCB(start, end);
+    PCB* thisPCB = makePCB();
     addToReady(thisPCB);
     return errCode;
 }
@@ -96,12 +93,13 @@ void scheduler(){
         cpu->IP = removeHead->pageTable[removeHead->PC_page];	    // Copy PC from PCB into IP of CPU
         cpu->offset = removeHead->PC_offset;
         oldhead = head;
-        int InstructionsToExecute = (removeHead->max_lines - removeHead->PC) + 1;
+        int InstructionsToExecute = (removeHead->max_lines - (removeHead->PC_page)*4+removeHead->PC_offset) + 1;
         int interruptStatusFlag=0;
         if(cpu->quanta < InstructionsToExecute){
         	interruptStatusFlag = runCPU(cpu->quanta);
         	if(interruptStatusFlag==1){
-        		resolvePageFault(removeHead);
+        		if(resolvePageFault(removeHead)==0)
+        			addToReady(removeHead);
         	}
         	else{
         		removeHead->PC_offset = cpu->offset;
@@ -110,10 +108,16 @@ void scheduler(){
         	}
         }else{
         	interruptStatusFlag = runCPU(InstructionsToExecute);
-        	if(interruptStatusFlag==1)
-        		resolvePageFault(removeHead);
-            for(int i = removeHead->start; i <= removeHead->end ; i++){
-                ram[i] = NULL;
+//        	if(interruptStatusFlag==1)
+//        		resolvePageFault(removeHead);
+            for(int i=0; i<10; i++){
+            	if(removeHead->pageTable[i]!=-1){
+            		int index = removeHead->pageTable[i];
+                    ram[index] = NULL;
+                    ram[index+1] = NULL;
+                    ram[index+2] = NULL;
+                    ram[index+3] = NULL;
+            	}
             }
             free(oldhead);
         }
