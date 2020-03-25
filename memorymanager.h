@@ -10,7 +10,6 @@
 #ifndef MEMORYMANAGER_H_
 #define MEMORYMANAGER_H_
 
-
 int launcher(FILE *p);
 
 int countTotalPages(FILE *f);

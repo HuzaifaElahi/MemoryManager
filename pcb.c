@@ -12,8 +12,11 @@
 
 #include "pcb.h"
 
-PCB* makePCB(){
+PCB* makePCB(int pid, int pages_max, int lines_max){
     PCB* newPCB = malloc(sizeof(struct PCB_t));
+    newPCB->pid=pid;
+    newPCB->pages_max=pages_max;
+    newPCB->lines_max=lines_max;
     newPCB->PC_page=0;
     newPCB->PC_offset=0;
     for(int i=0; i<10;i++){

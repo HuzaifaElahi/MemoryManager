@@ -10,17 +10,17 @@
 
 #include "pcb.h"
 
-struct QUEUE_NODE {
+typedef struct QUEUE_NODE_t {
     PCB *thisPCB;
-    struct QUEUE_NODE *next;
-};
+    struct QUEUE_NODE_t *next;
+}QUEUE_NODE;
 
-extern struct QUEUE_NODE *head;
-extern struct QUEUE_NODE *tail;
+extern QUEUE_NODE *head;
 
 int boot();
 int kernel();
 int myinit(char* fileName);
 void scheduler();
+void addToReady(PCB *pcb);
 
 #endif

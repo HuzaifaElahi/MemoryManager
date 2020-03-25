@@ -16,7 +16,7 @@ int shellUI()
 {
     printf("Kernel 1.0 loaded!\n"
     	   "Welcome to the Ahmed Elehwany shell!\n"
-           "Version 2.0 Updated February 2020\n");
+           "Version 3.0 Updated March 2020\n");
 
     shell_memory_initialize();
 

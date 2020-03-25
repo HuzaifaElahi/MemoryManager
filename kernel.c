@@ -17,11 +17,8 @@
 #include "memorymanager.h"
 
 
-struct QUEUE_NODE *oldhead = NULL;
-struct QUEUE_NODE *head = NULL;
-struct QUEUE_NODE *tail = NULL;
-
-void addToReady(PCB *pcb);
+QUEUE_NODE *oldhead = NULL;
+QUEUE_NODE *tail = NULL;
 
 CPU* cpu;
 char *ram[40];
@@ -29,9 +26,6 @@ int main(int argc, const char *argv[])
 {
 	int error=0;
 	boot();
-	char* const path = "script1.txt";
-	FILE *p = fopen(path, "r");
-	launcher(p);
     error = kernel();
     return error;
 }
@@ -63,15 +57,24 @@ int myinit(char *fileName){
         printf("exec: Script '%s' not found.\n", fileName);
         return 1;
     }
+//    printf("myinit call launcher\n");
+    errCode = launcher(file);
+    if(errCode != 0)	return errCode;
 
-//    if(errCode != 0)	return errCode;
-    PCB* thisPCB = makePCB();
-    addToReady(thisPCB);
     return errCode;
 }
 
 void addToReady(PCB *pcb){
-    struct QUEUE_NODE *newPCB = malloc(sizeof(struct QUEUE_NODE));
+//	printf("start add to ready\n");
+//	printf("///////\n");
+//	printf("pid:%d\n", pcb->pid);
+//	printf("max_lines:%d\n", pcb->lines_max);
+//	printf("max_pages:%d\n", pcb->pages_max);
+//	printf("page:%d\n", pcb->PC_page);
+//	printf("offset:%d\n", pcb->PC_offset);
+//	printf("finish add to ready\n")
+//	printf("///////\n");
+    QUEUE_NODE *newPCB = malloc(sizeof(QUEUE_NODE));
     newPCB->thisPCB = pcb;
     if(head == NULL){
         head = newPCB;
@@ -87,16 +90,25 @@ void addToReady(PCB *pcb){
 void scheduler(){
     cpu = malloc(sizeof(CPU));
     cpu->quanta = 2;
+//    printf("start scheduler\n");
 
     while(head != NULL && head!=tail->next){
+//    	printf("while loop\n");
         PCB* removeHead = head->thisPCB;
         cpu->IP = removeHead->pageTable[removeHead->PC_page];	    // Copy PC from PCB into IP of CPU
         cpu->offset = removeHead->PC_offset;
         oldhead = head;
-        int InstructionsToExecute = (removeHead->max_lines - (removeHead->PC_page)*4+removeHead->PC_offset) + 1;
+        int InstructionsToExecute = removeHead->lines_max - ((removeHead->PC_page)*4+removeHead->PC_offset);
+//        printf("pid=%d\n", removeHead->pid);
+//        printf("page=%d\n", removeHead->PC_page);
+//        printf("offset=%d\n", removeHead->PC_offset);
+//        printf("max lines=%d\n", removeHead->lines_max);
+//        printf("instructions to exec=%d\n", InstructionsToExecute);
         int interruptStatusFlag=0;
         if(cpu->quanta < InstructionsToExecute){
+//        	printf("run cpu1\n");
         	interruptStatusFlag = runCPU(cpu->quanta);
+//        	printf("interrupt status=%d\n", interruptStatusFlag);
         	if(interruptStatusFlag==1){
         		if(resolvePageFault(removeHead)==0)
         			addToReady(removeHead);
@@ -107,9 +119,9 @@ void scheduler(){
                 addToReady(removeHead);		//add PCB back to the end of the ready queue
         	}
         }else{
+//        	printf("run cpu2\n");
         	interruptStatusFlag = runCPU(InstructionsToExecute);
-//        	if(interruptStatusFlag==1)
-//        		resolvePageFault(removeHead);
+//        	printf("interrupt status=%d\n", interruptStatusFlag);
             for(int i=0; i<10; i++){
             	if(removeHead->pageTable[i]!=-1){
             		int index = removeHead->pageTable[i];

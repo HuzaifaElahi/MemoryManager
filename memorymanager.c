@@ -12,10 +12,11 @@
 #include <time.h>
 
 #include "memorymanager.h"
+#include "kernel.h"
 #include "pcb.h"
 #include "ram.h"
 
-struct QUEUE_NODE *head;
+QUEUE_NODE *head;
 char *ram[40];
 int generated_pid=0;
 
@@ -56,7 +57,7 @@ int launchPaging(PCB *pcb, FILE* f, int totalPages){
 	int error=0;
     int enableFindVictim=0;
 	int frameNumber = findFrame();
-	if(frameNumber == -1)	{
+	if(frameNumber == -1){
 		frameNumber = findVictim(pcb);
 		enableFindVictim=1;
 	}
@@ -64,7 +65,6 @@ int launchPaging(PCB *pcb, FILE* f, int totalPages){
 	if(error!=0)
 		return error;
 	updatePageTable(pcb, 0, frameNumber, enableFindVictim);
-	printf("1st frame:%d\n", pcb->pageTable[0]);
 
 	if(totalPages>1){
 		frameNumber = findFrame();
@@ -76,7 +76,6 @@ int launchPaging(PCB *pcb, FILE* f, int totalPages){
 		if(error!=0)
 			return error;
 		updatePageTable(pcb, 1, frameNumber, enableFindVictim);
-		printf("2nd frame:%d\n", pcb->pageTable[1]);
 	}
 	return error;
 }
@@ -91,6 +90,18 @@ int victimExistsInPCB(PCB *p, int index){
 	return 0;
 }
 
+int countTotalLines(FILE *f){
+	fseek(f, 0, SEEK_SET);
+	int lines=0;
+    while(!feof(f)){
+        char *line = NULL;
+        size_t linecap = 0;
+        getline(&line, &linecap, f);
+    	lines++;
+    }
+    return lines;
+}
+
 
 int launcher(FILE *fptr1){
 	char* file;
@@ -100,19 +111,18 @@ int launcher(FILE *fptr1){
 	copyIntoBackingFile(fptr1, fptr2);
 	FILE *f = fopen(file, "r");
 	int totalPages = countTotalPages(f);
-	printf("total pages:%d\n", totalPages);
+	int totalLines = countTotalLines(f);
 
-    PCB* pcb = makePCB();
-    pcb->pages_max = totalPages;
-    pcb->pid=generated_pid;
-
+    PCB* pcb = makePCB(generated_pid, totalPages, totalLines);
     error= launchPaging(pcb, f, totalPages);
-
+    pcb->PC=pcb->pageTable[0];
+    addToReady(pcb);
     generated_pid++;
 	return error;
 }
 
 int countTotalPages(FILE *f){
+	fseek(f, 0, SEEK_SET);
 	int lines=0;
 	int pageSize = 4;
     while(!feof(f)){
@@ -156,20 +166,20 @@ int findFrame(){
 }
 
 int findVictim(PCB *p){
-	printf("find victim\n");
+//	printf("find victim\n");
 	srand(time(0));
 	int victimIndex = ((rand()%40)/4)*4;
-	printf("random index is:%d\n", victimIndex);
+//	printf("random index is:%d\n", victimIndex);
 	while(victimExistsInPCB(p, victimIndex)){
 		victimIndex=(victimIndex+4)%40;
 	}
-	printf("final victim Index:%d\n", victimIndex);
+//	printf("final victim Index:%d\n", victimIndex);
 	return victimIndex;
 }
 
 int updatePageTable(PCB *p, int pageNumber, int frameNumber, int victimFrame){
 	if(victimFrame!=0){		//if victim was selected, update other PCBs to not point anymore to the removed victim
-		struct QUEUE_NODE *pointer = head;
+		QUEUE_NODE *pointer = head;
 		while(pointer!=NULL){
 			PCB *thisPCB = pointer->thisPCB;
 			for(int i=0; i<10; i++){
