@@ -125,8 +125,8 @@ void scheduler(){
         }else{
 //        	printf("run cpu2\n");
         	interruptStatusFlag = runCPU(InstructionsToExecute);
-        	printf("pid:%d\n", removeHead->pid);
-        	printf("interrupt status=%d\n", interruptStatusFlag);
+//        	printf("pid:%d\n", removeHead->pid);
+//        	printf("interrupt status=%d\n", interruptStatusFlag);
             for(int i=0; i<10; i++){
             	if(removeHead->pageTable[i]!=-1){
             		int index = removeHead->pageTable[i];
@@ -142,6 +142,9 @@ void scheduler(){
     }
     head = NULL;
     tail = head;
+    for(int i=0; i<40;i++){
+    	ram[i]=NULL;
+    }
 }
 
 
