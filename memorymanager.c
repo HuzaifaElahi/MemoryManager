@@ -17,6 +17,7 @@
 #include "ram.h"
 
 QUEUE_NODE *head;
+QUEUE_NODE *tail;
 char *ram[40];
 int generated_pid=0;
 
@@ -168,37 +169,41 @@ int findFrame(){
 int findVictim(PCB *p){
 //	printf("find victim\n");
 	srand(time(0));
-	int victimIndex = ((rand()%40)/4)*4;
+	int victimIndex = (rand()%40)/4;
 //	printf("random index is:%d\n", victimIndex);
 	while(victimExistsInPCB(p, victimIndex)){
-		victimIndex=(victimIndex+4)%40;
+		victimIndex=(victimIndex+1)%10;
 	}
 //	printf("final victim Index:%d\n", victimIndex);
 	return victimIndex;
 }
 
 int updatePageTable(PCB *p, int pageNumber, int frameNumber, int victimFrame){
+//	printf("update page table\n");
+//	printf("frame number=%d\n", frameNumber);
 	if(victimFrame!=0){		//if victim was selected, update other PCBs to not point anymore to the removed victim
 		QUEUE_NODE *pointer = head;
-		while(pointer!=NULL){
+		while(pointer!=NULL && pointer!=tail->next){
+//			printf("update pcb with pid: %d\n", pointer->thisPCB->pid);
 			PCB *thisPCB = pointer->thisPCB;
 			for(int i=0; i<10; i++){
+//				printf("table[%d]=%d\n", i, thisPCB->pageTable[i]);
 				if((thisPCB->pageTable[i])==frameNumber){
 					thisPCB->pageTable[i]=-1;
+//					printf("%d\n", i);
 				}
 			}
-			pointer = pointer->next;
+			pointer=pointer->next;
 		}
 	}
-
 	p->pageTable[pageNumber] = frameNumber;
+//	printf("finish update page table\n");
 	return 0;
 }
 
 int resolvePageFault(PCB *pcb){
 	int error=0;
 	int enableFindVictim=0;
-	(pcb->PC_page)++;
 	if(pcb->PC_page>=pcb->pages_max)
 		return 1;
 	//check if frame exists in ram
@@ -213,12 +218,12 @@ int resolvePageFault(PCB *pcb){
 		constructFilePathFromPID(&filePath, pcb->pid);
 		FILE* f=fopen(filePath, "r");
 		error = loadPage(pcb->PC_page, f, frameNumber);
+
 		if(error!=0)
 			return error;
 		updatePageTable(pcb, pcb->PC_page, frameNumber, enableFindVictim);
 	}
-	pcb->PC = (pcb->pageTable[pcb->PC_page])*4;
-	pcb->PC_offset=0;
+	pcb->PC = (pcb->pageTable[pcb->PC_page])*4+pcb->PC_offset;
 	return error;
 }
 

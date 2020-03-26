@@ -16,6 +16,7 @@ typedef struct QUEUE_NODE_t {
 }QUEUE_NODE;
 
 extern QUEUE_NODE *head;
+extern QUEUE_NODE *tail;
 
 int boot();
 int kernel();

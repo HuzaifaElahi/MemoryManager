@@ -16,8 +16,8 @@
 #include "cpu.h"
 #include "memorymanager.h"
 
-
 QUEUE_NODE *oldhead = NULL;
+QUEUE_NODE *head = NULL;
 QUEUE_NODE *tail = NULL;
 
 CPU* cpu;
@@ -72,7 +72,7 @@ void addToReady(PCB *pcb){
 //	printf("max_pages:%d\n", pcb->pages_max);
 //	printf("page:%d\n", pcb->PC_page);
 //	printf("offset:%d\n", pcb->PC_offset);
-//	printf("finish add to ready\n")
+//	printf("finish add to ready\n");
 //	printf("///////\n");
     QUEUE_NODE *newPCB = malloc(sizeof(QUEUE_NODE));
     newPCB->thisPCB = pcb;
@@ -86,15 +86,17 @@ void addToReady(PCB *pcb){
     }
 }
 
-
 void scheduler(){
     cpu = malloc(sizeof(CPU));
     cpu->quanta = 2;
 //    printf("start scheduler\n");
 
     while(head != NULL && head!=tail->next){
-//    	printf("while loop\n");
+//   	printf("while loop\n");
         PCB* removeHead = head->thisPCB;
+//        printf("%d\n", removeHead->pageTable[removeHead->PC_page]);
+        if(removeHead->pageTable[removeHead->PC_page]==-1)
+        	resolvePageFault(removeHead);
         cpu->IP = removeHead->pageTable[removeHead->PC_page];	    // Copy PC from PCB into IP of CPU
         cpu->offset = removeHead->PC_offset;
         oldhead = head;
@@ -110,6 +112,8 @@ void scheduler(){
         	interruptStatusFlag = runCPU(cpu->quanta);
 //        	printf("interrupt status=%d\n", interruptStatusFlag);
         	if(interruptStatusFlag==1){
+        		removeHead->PC_offset=0;
+        		(removeHead->PC_page)++;
         		if(resolvePageFault(removeHead)==0)
         			addToReady(removeHead);
         	}
@@ -121,7 +125,8 @@ void scheduler(){
         }else{
 //        	printf("run cpu2\n");
         	interruptStatusFlag = runCPU(InstructionsToExecute);
-//        	printf("interrupt status=%d\n", interruptStatusFlag);
+        	printf("pid:%d\n", removeHead->pid);
+        	printf("interrupt status=%d\n", interruptStatusFlag);
             for(int i=0; i<10; i++){
             	if(removeHead->pageTable[i]!=-1){
             		int index = removeHead->pageTable[i];
