@@ -177,37 +177,28 @@ int findFrame(){
 }
 
 int findVictim(PCB *p){
-//	printf("find victim\n");
 	srand(time(0));
 	int victimIndex = (rand()%40)/4;
-//	printf("random index is:%d\n", victimIndex);
 	while(victimExistsInPCB(p, victimIndex)){
 		victimIndex=(victimIndex+1)%10;
 	}
-//	printf("final victim Index:%d\n", victimIndex);
 	return victimIndex;
 }
 
 int updatePageTable(PCB *p, int pageNumber, int frameNumber, int victimFrame){
-//	printf("update page table\n");
-//	printf("frame number=%d\n", frameNumber);
 	if(victimFrame!=0){		//if victim was selected, update other PCBs to not point anymore to the removed victim
 		QUEUE_NODE *pointer = head;
 		while(pointer!=NULL && pointer!=tail->next){
-//			printf("update pcb with pid: %d\n", pointer->thisPCB->pid);
 			PCB *thisPCB = pointer->thisPCB;
 			for(int i=0; i<10; i++){
-//				printf("table[%d]=%d\n", i, thisPCB->pageTable[i]);
 				if((thisPCB->pageTable[i])==frameNumber){
 					thisPCB->pageTable[i]=-1;
-//					printf("%d\n", i);
 				}
 			}
 			pointer=pointer->next;
 		}
 	}
 	p->pageTable[pageNumber] = frameNumber;
-//	printf("finish update page table\n");
 	return 0;
 }
 
