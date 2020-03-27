@@ -129,13 +129,14 @@ void scheduler(){
 //        	printf("interrupt status=%d\n", interruptStatusFlag);
             for(int i=0; i<10; i++){
             	if(removeHead->pageTable[i]!=-1){
-            		int index = removeHead->pageTable[i];
+            		int index = (removeHead->pageTable[i])*4;
                     ram[index] = NULL;
                     ram[index+1] = NULL;
                     ram[index+2] = NULL;
                     ram[index+3] = NULL;
             	}
             }
+            deleteBackingStorageFile(removeHead->pid);
             free(oldhead);
         }
         head = head->next;

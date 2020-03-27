@@ -31,6 +31,16 @@ int constructFilePathFromPID(char** file, int pid){
 	return 0;
 }
 
+int deleteBackingStorageFile(int pid){
+	char* filePath;
+	constructFilePathFromPID(&filePath, pid);
+    char rm_cmd[100];
+    strcpy(rm_cmd, "rm ");
+    strcat(rm_cmd, filePath);
+    system(rm_cmd);
+    return 0;
+}
+
 int createBackingStorageFile(char** file){
 	char* filePath;
 	constructFilePathFromPID(&filePath, generated_pid);

@@ -24,5 +24,6 @@ int findVictim(PCB *p);
 
 int resolvePageFault(PCB *p);
 
+int deleteBackingStorageFile(int pid);
 
 #endif /* MEMORYMANAGER_H_ */
