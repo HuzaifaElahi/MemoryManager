@@ -6,14 +6,16 @@
  *      Id:260707540
  */
 
-#include "interpreter.h"
-#include "shellmemory.h"
-#include "kernel.h"
-
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
+
+#include "interpreter.h"
+#include "shellmemory.h"
+#include "kernel.h"
+#include "memorymanager.h"
 
 int checkForDuplicateScripts(char *programs[]) {
 	int scriptNum = 1;
@@ -190,7 +192,12 @@ int exec(char *programs[]){
     int progID = 1;
     in_file_flag = 1;
     while(programs[progID] != NULL){
-        errCode = myinit(programs[progID]);
+        FILE *file = fopen(programs[progID], "r");
+        if (file == NULL) {
+            printf("exec: Script '%s' not found.\n", programs[progID]);
+            return 1;
+        }
+        errCode = launcher(file);
         if(errCode != 0)	return errCode;
         progID++;
     }

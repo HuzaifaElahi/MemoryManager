@@ -3,6 +3,7 @@
  *
  *  Created on: Mar. 22, 2020
  *      Author: ahmedelehwany
+ *      Id:260707540
  */
 
 #include <stdio.h>
@@ -79,7 +80,7 @@ int launchPaging(PCB *pcb, FILE* f, int totalPages){
 
 	if(totalPages>1){
 		frameNumber = findFrame();
-		if(frameNumber == -1)	{
+		if(frameNumber == -1){
 			frameNumber = findVictim(pcb);
 			enableFindVictim=1;
 		}
@@ -90,7 +91,6 @@ int launchPaging(PCB *pcb, FILE* f, int totalPages){
 	}
 	return error;
 }
-
 
 int victimExistsInPCB(PCB *p, int index){
 	size_t length = sizeof(p->pageTable)/sizeof(int);
@@ -112,7 +112,6 @@ int countTotalLines(FILE *f){
     }
     return lines;
 }
-
 
 int launcher(FILE *fptr1){
 	char* file;
