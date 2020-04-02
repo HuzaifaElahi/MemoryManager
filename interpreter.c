@@ -198,7 +198,7 @@ int exec(char *programs[]){
             return 1;
         }
         errCode = launcher(file);
-        if(errCode == -5)
+        if(errCode == -1)
         	printf("exec: Load Error: Script '%s' has too many pages\n", programs[progID]);
         if(errCode != 0) {
             in_file_flag = 0;

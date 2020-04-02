@@ -122,8 +122,12 @@ int launcher(FILE *fptr1){
 	FILE *fptr2 = fopen(file, "w");
 	copyIntoBackingFile(fptr1, fptr2);
 	FILE *f = fopen(file, "r");
-	int totalPages = countTotalPages(f);
 	int totalLines = countTotalLines(f);
+	int totalPages = countTotalPages(f);
+	if(totalPages > 10) {
+		deleteBackingStorageFile(generated_pid);
+		return -1;
+	}
     PCB* pcb = makePCB(generated_pid, totalPages, totalLines);
     error= launchPaging(pcb, f, totalPages);
     pcb->PC=pcb->pageTable[0];
