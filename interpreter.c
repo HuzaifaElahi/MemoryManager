@@ -207,6 +207,7 @@ int exec(char *programs[]){
         progID++;
     }
     scheduler();
+    in_file_flag = 0;
     return errCode;
 }
 
