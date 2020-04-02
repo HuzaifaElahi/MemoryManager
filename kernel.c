@@ -1,55 +1,58 @@
 /*
- * 	kernel.c
- *
- *  Created on: Feb. 23, 2020
- *      Author: ahmedelehwany
- *      Id:260707540
- */
+    Author: Muhammad Huzaifa Elahi
+    ID: 260726386
+*/
+
 #include <stdio.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "kernel.h"
-#include "shell.h"
 #include "ram.h"
 #include "cpu.h"
+#include "kernel.h"
+#include "shell.h"
 #include "memorymanager.h"
 
-QUEUE_NODE *oldhead = NULL;
-QUEUE_NODE *head = NULL;
-QUEUE_NODE *tail = NULL;
+const int QUANTA_SIZE = 2;
 
-CPU* cpu;
+void resetRAM();
+void removeFrame(int index);
+
+QUEUE_NODE *head = NULL, *tail = NULL, *oldhead = NULL;
 char *ram[40];
-int main(int argc, const char *argv[])
-{
-	int error=0;
-	boot();
-    error = kernel();
-    return error;
+CPU* cpu;
+
+int main(int argc, const char *argv[]){
+	int errCode = 0;
+	errCode = boot();
+    errCode = kernel();
+    return errCode;
 }
 
+// Boot up the OS by Initializing RAM & Setting Backing Storage Directory
 int boot(){
-	//create RAM global array of size 40 strings(not malloced). initializes array cells to null.
-	//clears old backing storage directory ,create new directory. Directory name is "BackingStore".
-    for(int i=0; i<40 ; i++){
-        ram[i] = NULL;
-    }
+
+	// Create RAM global array
+    resetRAM();
+    
+    // Clear old backing storage dir
     char rm_cmd[100];
     strcpy(rm_cmd, "rm -r BackingStore");
     system(rm_cmd);
 
+    // Create new dir "BackingStore"
     char mkdir_cmd[100];
     strcpy(mkdir_cmd, "mkdir BackingStore");
     system(mkdir_cmd);
 	return 0;
 }
 
+// Run the Kernel to launch the Shell
 int kernel(){
 	return shellUI();
 }
 
+// Open & Launch Script
 int myinit(char *fileName){
 	int errCode =0;
     FILE *file = fopen(fileName, "r");
@@ -57,83 +60,67 @@ int myinit(char *fileName){
         printf("exec: Script '%s' not found.\n", fileName);
         return 1;
     }
-//    printf("myinit call launcher\n");
     errCode = launcher(file);
-    if(errCode != 0)	return errCode;
-
     return errCode;
 }
 
+// Add PCB to Ready Queue
 void addToReady(PCB *pcb){
-//	printf("start add to ready\n");
-//	printf("///////\n");
-//	printf("pid:%d\n", pcb->pid);
-//	printf("max_lines:%d\n", pcb->lines_max);
-//	printf("max_pages:%d\n", pcb->pages_max);
-//	printf("page:%d\n", pcb->PC_page);
-//	printf("offset:%d\n", pcb->PC_offset);
-//	printf("finish add to ready\n");
-//	printf("///////\n");
     QUEUE_NODE *newPCB = malloc(sizeof(QUEUE_NODE));
     newPCB->thisPCB = pcb;
+
+    // Insert at Head if Queue Empty
     if(head == NULL){
         head = newPCB;
         tail = newPCB;
-    }else{
+    }
+    // Else Insert at End of Queue
+    else{
         tail->next = newPCB;
         tail = newPCB;
         tail->thisPCB = pcb;
     }
 }
 
+// Run Scheduler to Execute Instructions based on Ready Queue
 void scheduler(){
     cpu = malloc(sizeof(CPU));
-    cpu->quanta = 2;
-//    printf("start scheduler\n");
+    cpu->quanta = QUANTA_SIZE;
 
-    while(head != NULL && head!=tail->next){
-//   	printf("while loop\n");
+    while((head != NULL) && (head != tail->next)){
+        int interruptStatusFlag = 0;
+
         PCB* removeHead = head->thisPCB;
-//        printf("%d\n", removeHead->pageTable[removeHead->PC_page]);
-        if(removeHead->pageTable[removeHead->PC_page]==-1)
-        	resolvePageFault(removeHead);
-        cpu->IP = removeHead->pageTable[removeHead->PC_page];	    // Copy PC from PCB into IP of CPU
+        if(removeHead->pageTable[removeHead->PC_page] == -1) resolvePageFault(removeHead);
+
+        // Copy PC & Offset from PCB into CPU
+        cpu->IP = removeHead->pageTable[removeHead->PC_page];	    
         cpu->offset = removeHead->PC_offset;
+
         oldhead = head;
-        int InstructionsToExecute = removeHead->lines_max - ((removeHead->PC_page)*4+removeHead->PC_offset);
-//        printf("pid=%d\n", removeHead->pid);
-//        printf("page=%d\n", removeHead->PC_page);
-//        printf("offset=%d\n", removeHead->PC_offset);
-//        printf("max lines=%d\n", removeHead->lines_max);
-//        printf("instructions to exec=%d\n", InstructionsToExecute);
-        int interruptStatusFlag=0;
+        int InstructionsToExecute = removeHead->lines_max - ((removeHead->PC_page) * MAX_OFFSET + removeHead->PC_offset);
+        
+        // More Instructions to Execute than Quanta Avaliable
         if(cpu->quanta < InstructionsToExecute){
-//        	printf("run cpu1\n");
         	interruptStatusFlag = runCPU(cpu->quanta);
-//        	printf("interrupt status=%d\n", interruptStatusFlag);
-        	if(interruptStatusFlag==1){
-        		removeHead->PC_offset=0;
+        	if(interruptStatusFlag == 1){
+        		removeHead->PC_offset = 0;
         		(removeHead->PC_page)++;
-        		if(resolvePageFault(removeHead)==0)
-        			addToReady(removeHead);
+        		if(resolvePageFault(removeHead) == 0) addToReady(removeHead); // Add PCB back to the end of the ready queue if resolved
         	}
         	else{
         		removeHead->PC_offset = cpu->offset;
-        		removeHead->PC = (cpu->IP)*4 + cpu->offset;
-                addToReady(removeHead);		//add PCB back to the end of the ready queue
+        		removeHead->PC = (cpu->IP) * MAX_OFFSET + cpu->offset;
+                addToReady(removeHead);		// Add PCB back to the end of the ready queue
         	}
-        }else{
-//        	printf("run cpu2\n");
+        }
+        // Instructions Executed Before Quanta Expires
+        else{
         	interruptStatusFlag = runCPU(InstructionsToExecute);
-//        	printf("pid:%d\n", removeHead->pid);
-//        	printf("interrupt status=%d\n", interruptStatusFlag);
-            for(int i=0; i<10; i++){
-            	if(removeHead->pageTable[i]!=-1){
-            		int index = (removeHead->pageTable[i])*4;
-                    ram[index] = NULL;
-                    ram[index+1] = NULL;
-                    ram[index+2] = NULL;
-                    ram[index+3] = NULL;
+            for(int i = 0; i < 10; i++){
+            	if(removeHead->pageTable[i] != -1){
+            		int index = (removeHead->pageTable[i]) * MAX_OFFSET;
+                    removeFrame(index);
             	}
             }
             deleteBackingStorageFile(removeHead->pid);
@@ -143,9 +130,20 @@ void scheduler(){
     }
     head = NULL;
     tail = head;
-    for(int i=0; i<40;i++){
-    	ram[i]=NULL;
-    }
+    resetRAM(); // Reset RAM once scheduler finishes
+}
+
+// Reset RAM to NULL enteries
+void resetRAM(){
+    for(int i = 0; i < 40; i++) ram[i] = NULL;
+}
+
+// Set RAM entries values to NULL for Frame starting at index
+void removeFrame(int index){
+    ram[index] = NULL;
+    ram[index + 1] = NULL;
+    ram[index + 2] = NULL;
+    ram[index + 3] = NULL;
 }
 
 

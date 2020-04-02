@@ -1,27 +1,28 @@
 /*
- * 	cpu.c
- *
- *  Created on: Feb. 23, 2020
- *      Author: ahmedelehwany
- *      Id:260707540
- */
+    Author: Muhammad Huzaifa Elahi
+    ID: 260726386
+*/
 #include <stdio.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "cpu.h"
 #include "interpreter.h"
 #include "ram.h"
+#include "cpu.h"
 
+const int MAX_OFFSET = 4;
+
+// Takes Quanta Size & Runs Instructions
 int runCPU(int quanta){
     while(quanta > 0){
-    	int address = (cpu->IP)*4 +(cpu->offset);
+        // Find & Run Next Instruction
+    	int address = (cpu->IP) * MAX_OFFSET +(cpu->offset);
         strcpy(cpu->IR, ram[address]);
         interpret(cpu->IR);
+        
+        // Increase Offset
         cpu->offset++;
-        if(cpu->offset>=4)
-        	return 1;
+        if(cpu->offset >= MAX_OFFSET) return 1;
         quanta--;
     }
     return 0;

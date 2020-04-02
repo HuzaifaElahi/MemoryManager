@@ -1,165 +1,108 @@
 /*
- * memorymanager.c
- *
- *  Created on: Mar. 22, 2020
- *      Author: ahmedelehwany
- */
+    Author: Muhammad Huzaifa Elahi
+    ID: 260726386
+*/
 
 #include <stdio.h>
-#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
 #include "memorymanager.h"
+#include "ram.h"
 #include "kernel.h"
 #include "pcb.h"
-#include "ram.h"
 
-QUEUE_NODE *head;
-QUEUE_NODE *tail;
+int countTotalPages(FILE *f);
+int countTotalLines(FILE *f);
+int loadPage(int pageNumber, FILE *f, int frameNumber);
+int findFrame();
+int updatePageTable(PCB *p, int pageNumber, int frameNumber, int victimFrame);
+int findVictim(PCB *p);
+int resolvePageFault(PCB *p);
+int launchPaging(PCB *pcb, FILE* f, int totalPages);
+int victimExistsInPCB(PCB *p, int index);
+int constructFilePathFromPID(char** file, int pid);
+int copyIntoBackingFile(FILE* fptr1, FILE* fptr2);
+int createBackingStorageFile(char** file);
+int isNull(int index);
+
+const int PAGE_SIZE = 4;
+
+QUEUE_NODE *head, *tail;
 char *ram[40];
-int generated_pid=0;
+int generated_pid = 0;  // Keep track of PID values
 
-int constructFilePathFromPID(char** file, int pid){
-	char filePath[100] = "BackingStore/";
-	char fileName[100];
-	sprintf(fileName, "%d", pid);
-	strcat(filePath, fileName);
-	strcat(filePath, ".txt");
-	*file = strdup(filePath);
-	return 0;
-}
-
-int deleteBackingStorageFile(int pid){
-	char* filePath;
-	constructFilePathFromPID(&filePath, pid);
-    char rm_cmd[100];
-    strcpy(rm_cmd, "rm ");
-    strcat(rm_cmd, filePath);
-    system(rm_cmd);
-    return 0;
-}
-
-int createBackingStorageFile(char** file){
-	char* filePath;
-	constructFilePathFromPID(&filePath, generated_pid);
-	char touch_cmd[100];
-	strcpy(touch_cmd, "touch ");
-	strcat(touch_cmd, filePath);
-	system(touch_cmd);
-	*file = strdup(filePath);
-	return 0;
-}
-
-int copyIntoBackingFile(FILE* fptr1, FILE* fptr2){
-    char c = fgetc(fptr1);
-    while (!feof(fptr1))
-    {
-        fputc(c, fptr2);
-        c = fgetc(fptr1);
-    }
-    fclose(fptr1);
-    fclose(fptr2);
-    return 0;
-}
-
-int launchPaging(PCB *pcb, FILE* f, int totalPages){
-	int error=0;
-    int enableFindVictim=0;
-	int frameNumber = findFrame();
-	if(frameNumber == -1){
-		frameNumber = findVictim(pcb);
-		enableFindVictim=1;
-	}
-	error = loadPage(0, f, frameNumber);
-	if(error!=0)
-		return error;
-	updatePageTable(pcb, 0, frameNumber, enableFindVictim);
-
-	if(totalPages>1){
-		frameNumber = findFrame();
-		if(frameNumber == -1)	{
-			frameNumber = findVictim(pcb);
-			enableFindVictim=1;
-		}
-		error = loadPage(1, f, frameNumber);
-		if(error!=0)
-			return error;
-		updatePageTable(pcb, 1, frameNumber, enableFindVictim);
-	}
-	return error;
-}
-
-
-int victimExistsInPCB(PCB *p, int index){
-	size_t length = sizeof(p->pageTable)/sizeof(int);
-	for(int i=0; i<length;i++){
-		if(p->pageTable[i]==index)
-			return 1;
-	}
-	return 0;
-}
-
-int countTotalLines(FILE *f){
-	fseek(f, 0, SEEK_SET);
-	int lines=0;
-    while(!feof(f)){
-        char *line = NULL;
-        size_t linecap = 0;
-        getline(&line, &linecap, f);
-    	lines++;
-    }
-    return lines;
-}
-
-
+// Launch File
 int launcher(FILE *fptr1){
 	char* file;
-	int error=0;
+	int errCode = 0;
+
+	// Create Backing Storage File & Copy File Contents Over
 	createBackingStorageFile(&file);
 	FILE *fptr2 = fopen(file, "w");
 	copyIntoBackingFile(fptr1, fptr2);
-	FILE *f = fopen(file, "r");
-	int totalPages = countTotalPages(f);
-	int totalLines = countTotalLines(f);
 
-    PCB* pcb = makePCB(generated_pid, totalPages, totalLines);
-    error= launchPaging(pcb, f, totalPages);
-    pcb->PC=pcb->pageTable[0];
+	// Determine # Total Lines & # Total Pages
+	FILE *f = fopen(file, "r");
+	int numLines = countTotalLines(f);
+	int numPages = countTotalPages(f);
+
+	// Make PCB, Launch Paging, Obtain PC from Page Table, Add PCB to Ready Queue
+    PCB* pcb = makePCB(generated_pid, numPages, numLines);
+    errCode = launchPaging(pcb, f, numPages);
+    pcb->PC = pcb->pageTable[0];
     addToReady(pcb);
     generated_pid++;
-	return error;
+
+	return errCode;
 }
 
-int countTotalPages(FILE *f){
-	fseek(f, 0, SEEK_SET);
-	int lines=0;
-	int pageSize = 4;
-    while(!feof(f)){
-        char *line = NULL;
-        size_t linecap = 0;
-        getline(&line, &linecap, f);
-    	lines++;
-    }
-    int pageCount = lines/pageSize;
-    if(lines%pageSize != 0)
-    	pageCount++;
+// Launch Paging given PCB, File ptr and Total Page #
+int launchPaging(PCB *pcb, FILE* f, int totalPages){
+	int errCode=0, enableFindVictim = 0;  // Flag to enable victim finding
+	
+	// Find Frame & Victim
+	int frameNumber = findFrame();
+	if(frameNumber == -1){
+		frameNumber = findVictim(pcb);
+		enableFindVictim = 1;
+	}
 
-    return pageCount;
+	// Load Page & Update Page Table
+	errCode = loadPage(0, f, frameNumber);
+	if(errCode!=0) return errCode;
+	updatePageTable(pcb, 0, frameNumber, enableFindVictim);
+
+	// Re-run above logic if more than 1 Total Pages
+	if(totalPages > 1){
+		// Find Frame & Victim
+		frameNumber = findFrame();
+		if(frameNumber == -1)	{
+			frameNumber = findVictim(pcb);
+			enableFindVictim = 1;
+		}
+
+		// Load Page & Update Page Table
+		errCode = loadPage(1, f, frameNumber);
+		if(errCode!=0) return errCode;
+		updatePageTable(pcb, 1, frameNumber, enableFindVictim);
+	}
+	return errCode;
 }
 
+// Load Page
 int loadPage(int pageNumber, FILE *f, int frameNumber){
 	fseek(f, 0, SEEK_SET);
-	int lineTarget = pageNumber*4;
-	int lineCount=0;
-    int offset=0;
+	int offset = 0, lineCount = 0;
+	int lineTarget = pageNumber * PAGE_SIZE;
+
     while(!feof(f)){
+		size_t linecap = 0;
         char *line = NULL;
-        size_t linecap = 0;
         getline(&line, &linecap, f);
-    	if(lineCount>=lineTarget && lineCount<lineTarget+4){
-    		ram[frameNumber*4+offset]=strdup(line);
+    	if(lineCount >= lineTarget && lineCount < lineTarget + PAGE_SIZE){
+    		ram[frameNumber * PAGE_SIZE + offset]=strdup(line);
     		offset++;
     	}
     	lineCount++;
@@ -167,65 +110,154 @@ int loadPage(int pageNumber, FILE *f, int frameNumber){
 	return 0;
 }
 
-int findFrame(){
-	for(int i=0; i<37; i+=4){
-		if(ram[i]==NULL && ram[i+1]==NULL && ram[i+2]==NULL && ram[i+3]==NULL){
-			return i/4;
-		}
+// Checks RAM starting at Index if frame is NULL
+int isNull(int index){
+	if(ram[index] == NULL &&
+	 ram[index + 1] == NULL && 
+	 ram[index + 2] == NULL && 
+	 ram[index + 3] == NULL) {
+		return 1;
 	}
+	return 0;
+}
+
+// Find Avaliable Frame Slot
+int findFrame(){
+	for(int i=0; i<37; i+= 4) if(isNull(i)) return i/4;
 	return -1;
 }
 
+// Find Victim Index 
 int findVictim(PCB *p){
 	srand(time(0));
-	int victimIndex = (rand()%40)/4;
-	while(victimExistsInPCB(p, victimIndex)){
-		victimIndex=(victimIndex+1)%10;
-	}
+	int victimIndex = (rand() % 40) / PAGE_SIZE;
+	while(victimExistsInPCB(p, victimIndex)) victimIndex = (victimIndex + 1) % 10;
 	return victimIndex;
 }
 
+// Update Page table
 int updatePageTable(PCB *p, int pageNumber, int frameNumber, int victimFrame){
-	if(victimFrame!=0){		//if victim was selected, update other PCBs to not point anymore to the removed victim
+	if(victimFrame != 0){		// If victim selected, update other PCBs so they don't point to the removed victim
 		QUEUE_NODE *pointer = head;
-		while(pointer!=NULL && pointer!=tail->next){
+		while((pointer != NULL) && (pointer != tail->next)){
 			PCB *thisPCB = pointer->thisPCB;
-			for(int i=0; i<10; i++){
-				if((thisPCB->pageTable[i])==frameNumber){
-					thisPCB->pageTable[i]=-1;
-				}
-			}
-			pointer=pointer->next;
+			for(int i = 0; i < 10; i++) if((thisPCB->pageTable[i]) == frameNumber) thisPCB->pageTable[i] =- 1;
+			pointer = pointer->next;
 		}
 	}
 	p->pageTable[pageNumber] = frameNumber;
 	return 0;
 }
 
+// Resolve Page Fault 
 int resolvePageFault(PCB *pcb){
 	int error=0;
 	int enableFindVictim=0;
-	if(pcb->PC_page>=pcb->pages_max)
-		return 1;
-	//check if frame exists in ram
+	if(pcb->PC_page >= pcb->pages_max) return 1;
+	
+	// Check if RAM contains Frame
 	if(pcb->pageTable[pcb->PC_page] == -1){
+
+		// Find Frame & Victim
 		int frameNumber = findFrame();
 		if(frameNumber == -1)	{
 			frameNumber = findVictim(pcb);
-			enableFindVictim=1;
+			enableFindVictim = 1;
 		}
 
+		// Create File Path & Load Page
 		char* filePath;
 		constructFilePathFromPID(&filePath, pcb->pid);
-		FILE* f=fopen(filePath, "r");
+		FILE* f = fopen(filePath, "r");
 		error = loadPage(pcb->PC_page, f, frameNumber);
+		if(error != 0) return error;
 
-		if(error!=0)
-			return error;
-		updatePageTable(pcb, pcb->PC_page, frameNumber, enableFindVictim);
+		updatePageTable(pcb, pcb->PC_page, frameNumber, enableFindVictim); // Update Page Table if No Error in Loading Page
 	}
-	pcb->PC = (pcb->pageTable[pcb->PC_page])*4+pcb->PC_offset;
+	pcb->PC = (pcb->pageTable[pcb->PC_page]) * PAGE_SIZE + pcb->PC_offset;
+
 	return error;
+}
+
+// Check Victim Exists in Given PCB
+int victimExistsInPCB(PCB *p, int index){
+	size_t length = sizeof(p->pageTable) / sizeof(int);
+	for(int i = 0; i < length; i++)	if(p->pageTable[i] == index) return 1;
+	return 0;
+}
+
+// Count Total Lines in given File
+int countTotalLines(FILE *f){
+	int lines = 0;
+	fseek(f, 0, SEEK_SET);
+    while(!feof(f)){
+		size_t linecap = 0;
+        char *line = NULL;
+        getline(&line, &linecap, f);
+    	lines++;
+    }
+    return lines;
+}
+
+// Count Total Pages in given File
+int countTotalPages(FILE *f){
+	int lines = countTotalLines(f);
+    int pageCount = lines / PAGE_SIZE;
+    if(lines % PAGE_SIZE != 0) pageCount++;
+
+    return pageCount;
+}
+
+// Create File Path from a given PID Value
+int constructFilePathFromPID(char** file, int pid){
+	// Create File path & Set File Pointer
+	char fileName[100];
+	char filePath[100] = "BackingStore/";
+	sprintf(fileName, "%d", pid);
+	strcat(filePath, fileName);
+	strcat(filePath, ".txt");
+	*file = strdup(filePath);
+	return 0;
+}
+
+// Delete Backing Storage File from given PID Value
+int deleteBackingStorageFile(int pid){
+	// Create & Run rm Command
+	char* filePath;
+	char rm_cmd[100];
+	constructFilePathFromPID(&filePath, pid);
+    strcpy(rm_cmd, "rm ");
+    strcat(rm_cmd, filePath);
+    system(rm_cmd);
+    return 0;
+}
+
+// Create Backing Storage File for given File Pointer
+int createBackingStorageFile(char** file){
+	// Crate & Run touch Command 
+	char* filePath;
+	char touch_cmd[100];
+	constructFilePathFromPID(&filePath, generated_pid);
+	strcpy(touch_cmd, "touch ");
+	strcat(touch_cmd, filePath);
+	system(touch_cmd);
+
+	// Set File Pointer
+	*file = strdup(filePath);
+	return 0;
+}
+
+// Copy File Contents
+int copyIntoBackingFile(FILE* fptr1, FILE* fptr2){
+	// Fetch characters from File 1 until end of file & Insert in File 2
+    char f1_char = fgetc(fptr1);
+    while (!feof(fptr1)){
+        fputc(f1_char, fptr2);
+        f1_char = fgetc(fptr1);
+    }
+    fclose(fptr1);
+    fclose(fptr2);
+    return 0;
 }
 
 

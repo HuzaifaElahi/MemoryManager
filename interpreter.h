@@ -1,10 +1,7 @@
 /*
- * 	interpreter.h
- *
- *  Created on: Feb. 23, 2020
- *      Author: ahmedelehwany
- *      Id:260707540
- */
+    Author: Muhammad Huzaifa Elahi
+    ID: 260726386
+*/
 
 #ifndef INTERPRETER_H
 #define INTERPRETER_H

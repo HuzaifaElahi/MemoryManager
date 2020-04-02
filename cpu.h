@@ -1,10 +1,7 @@
 /*
- * 	pcb.h
- *
- *  Created on: Feb. 23, 2020
- *      Author: ahmedelehwany
- *      Id:260707540
- */
+    Author: Muhammad Huzaifa Elahi
+    ID: 260726386
+*/
 
 #ifndef CPU_H
 #define CPU_H
@@ -19,5 +16,7 @@ typedef struct CPU_t {
 } CPU;
 
 extern CPU *cpu;
+
+extern const int MAX_OFFSET;
 
 #endif
