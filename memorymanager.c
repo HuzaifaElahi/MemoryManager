@@ -17,6 +17,8 @@
 #include "pcb.h"
 #include "ram.h"
 
+const int PAGE_SIZE = 4;
+
 QUEUE_NODE *head;
 QUEUE_NODE *tail;
 char *ram[40];
@@ -54,12 +56,12 @@ int createBackingStorageFile(char** file){
 }
 
 int copyIntoBackingFile(FILE* fptr1, FILE* fptr2){
-    char c = fgetc(fptr1);
-    while (!feof(fptr1))
-    {
-        fputc(c, fptr2);
-        c = fgetc(fptr1);
-    }
+	char lineBuffer[1000];
+	while(fgets(lineBuffer, sizeof lineBuffer, fptr1) != NULL) {
+		if(lineBuffer[0] == '\0' || lineBuffer[0] == '\n' || lineBuffer[0] == ' ')
+			continue;  // skip the rest of the loop and continue
+		fputs(lineBuffer, fptr2);
+	}
     fclose(fptr1);
     fclose(fptr2);
     return 0;
@@ -122,7 +124,6 @@ int launcher(FILE *fptr1){
 	FILE *f = fopen(file, "r");
 	int totalPages = countTotalPages(f);
 	int totalLines = countTotalLines(f);
-
     PCB* pcb = makePCB(generated_pid, totalPages, totalLines);
     error= launchPaging(pcb, f, totalPages);
     pcb->PC=pcb->pageTable[0];
@@ -132,17 +133,9 @@ int launcher(FILE *fptr1){
 }
 
 int countTotalPages(FILE *f){
-	fseek(f, 0, SEEK_SET);
-	int lines=0;
-	int pageSize = 4;
-    while(!feof(f)){
-        char *line = NULL;
-        size_t linecap = 0;
-        getline(&line, &linecap, f);
-    	lines++;
-    }
-    int pageCount = lines/pageSize;
-    if(lines%pageSize != 0)
+	int lines = countTotalLines(f);
+    int pageCount = lines/PAGE_SIZE;
+    if(lines%PAGE_SIZE != 0)
     	pageCount++;
 
     return pageCount;
@@ -167,7 +160,7 @@ int loadPage(int pageNumber, FILE *f, int frameNumber){
 }
 
 int findFrame(){
-	for(int i=0; i<37; i+=4){
+	for(int i=0; i<37; i+=PAGE_SIZE){
 		if(ram[i]==NULL && ram[i+1]==NULL && ram[i+2]==NULL && ram[i+3]==NULL){
 			return i/4;
 		}
@@ -177,7 +170,7 @@ int findFrame(){
 
 int findVictim(PCB *p){
 	srand(time(0));
-	int victimIndex = (rand()%40)/4;
+	int victimIndex = (rand()%40)/PAGE_SIZE;
 	while(victimExistsInPCB(p, victimIndex)){
 		victimIndex=(victimIndex+1)%10;
 	}
@@ -223,7 +216,7 @@ int resolvePageFault(PCB *pcb){
 			return error;
 		updatePageTable(pcb, pcb->PC_page, frameNumber, enableFindVictim);
 	}
-	pcb->PC = (pcb->pageTable[pcb->PC_page])*4+pcb->PC_offset;
+	pcb->PC = (pcb->pageTable[pcb->PC_page])*PAGE_SIZE+pcb->PC_offset;
 	return error;
 }
 

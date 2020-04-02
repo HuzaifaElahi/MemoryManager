@@ -198,11 +198,15 @@ int exec(char *programs[]){
             return 1;
         }
         errCode = launcher(file);
-        if(errCode != 0)	return errCode;
+        if(errCode == -5)
+        	printf("exec: Load Error: Script '%s' has too many pages\n", programs[progID]);
+        if(errCode != 0) {
+            in_file_flag = 0;
+        	return errCode;
+        }
         progID++;
     }
     scheduler();
-    in_file_flag = 0;
     return errCode;
 }
 
@@ -272,6 +276,7 @@ int interpret(char *raw_input)
         {
             printf("run: Malformed command\n");
             free(tokens);
+            return 1;
         }
         int result = run(tokens[1]);
         free(tokens);
@@ -284,6 +289,7 @@ int interpret(char *raw_input)
         {
             printf("exec: Malformed command\n");
             free(tokens);
+            return 1;
         }
 
         int result = exec(tokens);
