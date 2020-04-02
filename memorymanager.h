@@ -5,6 +5,8 @@
 
 #include "pcb.h"
 
+#include <stdio.h>
+
 #ifndef MEMORYMANAGER_H_
 #define MEMORYMANAGER_H_
 

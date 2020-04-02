@@ -21,6 +21,5 @@ void addToReady(PCB *pcb);
 
 int boot();
 int kernel();
-int myinit(char* fileName);
 
 #endif

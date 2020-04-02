@@ -48,6 +48,11 @@ int launcher(FILE *fptr1){
 	int numLines = countTotalLines(f);
 	int numPages = countTotalPages(f);
 
+	if(numPages > 10) {
+		deleteBackingStorageFile(generated_pid);
+		return -5;
+	}
+
 	// Make PCB, Launch Paging, Obtain PC from Page Table, Add PCB to Ready Queue
     PCB* pcb = makePCB(generated_pid, numPages, numLines);
     errCode = launchPaging(pcb, f, numPages);
@@ -250,11 +255,13 @@ int createBackingStorageFile(char** file){
 // Copy File Contents
 int copyIntoBackingFile(FILE* fptr1, FILE* fptr2){
 	// Fetch characters from File 1 until end of file & Insert in File 2
-    char f1_char = fgetc(fptr1);
-    while (!feof(fptr1)){
-        fputc(f1_char, fptr2);
-        f1_char = fgetc(fptr1);
-    }
+	char lineBuffer[1000];
+	while(fgets(lineBuffer, sizeof lineBuffer, fptr1) != NULL) {
+		if(lineBuffer[0] == '\0' || lineBuffer[0] == '\n' || lineBuffer[0] == ' ')
+			continue;  // skip the rest of the loop and continue
+		fputs(lineBuffer, fptr2);
+	}
+
     fclose(fptr1);
     fclose(fptr2);
     return 0;

@@ -5,6 +5,7 @@
 
 #include "interpreter.h"
 #include "shellmemory.h"
+#include "memorymanager.h"
 #include "kernel.h"
 
 #include <stdlib.h>
@@ -136,8 +137,17 @@ int exec(char *programs[]){
     int progID = 1;
     in_file_flag = 1;
     while(programs[progID] != NULL){
-        errCode = myinit(programs[progID]);
-        if(errCode != 0)	return errCode;
+        FILE *file = fopen(programs[progID], "r");
+        if (file == NULL) {
+            printf("exec: Script '%s' not found.\n", programs[progID]);
+            return 1;
+        }
+        errCode = launcher(file);
+        if(errCode == -5) printf("exec: Load Error: Script '%s' has too many pages\n", programs[progID]);
+        if(errCode != 0){
+            in_file_flag = 0;
+            return 1;
+        } 
         progID++;
     }
     scheduler();
@@ -199,6 +209,7 @@ int interpret(char *raw_input){
         if (!(tokens[1] != NULL && tokens[2] == NULL)){
             printf("run: Malformed command\n");
             free(tokens);
+            return 1;
         }
         int result = run(tokens[1]);
         free(tokens);
@@ -209,6 +220,7 @@ int interpret(char *raw_input){
         if (!(tokens[1] != NULL && tokens[4] == NULL)){
             printf("exec: Malformed command\n");
             free(tokens);
+            return 1;
         }
 
         int result = exec(tokens);

@@ -52,18 +52,6 @@ int kernel(){
 	return shellUI();
 }
 
-// Open & Launch Script
-int myinit(char *fileName){
-	int errCode =0;
-    FILE *file = fopen(fileName, "r");
-    if (file == NULL) {
-        printf("exec: Script '%s' not found.\n", fileName);
-        return 1;
-    }
-    errCode = launcher(file);
-    return errCode;
-}
-
 // Add PCB to Ready Queue
 void addToReady(PCB *pcb){
     QUEUE_NODE *newPCB = malloc(sizeof(QUEUE_NODE));
