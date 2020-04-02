@@ -117,7 +117,7 @@ int countTotalLines(FILE *f){
 
 int launcher(FILE *fptr1){
 	char* file;
-	int error=0;
+	int errCode=0;
 	createBackingStorageFile(&file);
 	FILE *fptr2 = fopen(file, "w");
 	copyIntoBackingFile(fptr1, fptr2);
@@ -129,11 +129,11 @@ int launcher(FILE *fptr1){
 		return -1;
 	}
     PCB* pcb = makePCB(generated_pid, totalPages, totalLines);
-    error= launchPaging(pcb, f, totalPages);
+    errCode= launchPaging(pcb, f, totalPages);
     pcb->PC=pcb->pageTable[0];
     addToReady(pcb);
     generated_pid++;
-	return error;
+	return errCode;
 }
 
 int countTotalPages(FILE *f){

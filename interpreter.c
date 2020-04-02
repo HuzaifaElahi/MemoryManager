@@ -17,28 +17,6 @@
 #include "kernel.h"
 #include "memorymanager.h"
 
-int checkForDuplicateScripts(char *programs[]) {
-	int scriptNum = 1;
-	if (programs[2] != NULL)
-		scriptNum = 2;
-	if (programs[3] != NULL)
-		scriptNum = 3;
-
-	if (scriptNum == 1)
-		return 0;
-	else if (scriptNum >= 2 && strcmp(programs[1], programs[2]) == 0) {
-		printf("Error: Script '%s' already loaded\n", programs[1]);
-		return 1;
-	} else if (scriptNum == 3 && strcmp(programs[1], programs[3]) == 0) {
-		printf("Error: Script '%s' already loaded\n", programs[1]);
-		return 1;
-	} else if (scriptNum == 3 && strcmp(programs[2], programs[3]) == 0) {
-		printf("Error: Script '%s' already loaded\n", programs[3]);
-		return 1;
-	}
-	return 0;
-}
-
 char **tokenize(char *str)
 {
     size_t num_tokens = 1;
@@ -187,8 +165,6 @@ int print(const char *key)
 
 int exec(char *programs[]){
     int errCode	= 0;
-    errCode = checkForDuplicateScripts(programs);
-    if(errCode != 0)	return errCode;
     int progID = 1;
     in_file_flag = 1;
     while(programs[progID] != NULL){
